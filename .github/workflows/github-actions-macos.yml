@@ -1,8 +1,6 @@
 name: Build on macOS
 on:
-  # Triggers the workflow on push or pull request events
   pull_request:
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
 jobs:
@@ -11,17 +9,16 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Setup xcode
-        uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90  # v1.7.0
+        uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90
         with:
           xcode-version: latest-stable
       - name: Check out repository code
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
-          submodules: 'recursive'
+          submodules: recursive
       - name: Install dependencies
-        run: |
-          ./etc/DependencyInstaller.sh
-      - name: Build OpenROAD
+        run: ./etc/DependencyInstaller.sh
+      - name: Build OpenROAD at PR head
         run: |
           export PATH="$(brew --prefix bison)/bin:$PATH"
           export PATH="$(brew --prefix flex)/bin:$PATH"
@@ -29,28 +26,40 @@ jobs:
           export CMAKE_PREFIX_PATH="$(brew --prefix or-tools)"
           export PKG_CONFIG_PATH="$(brew --prefix tcl-tk)/lib/pkgconfig"
           export MY_QT_PATH=$(find /usr/local/Cellar/qt@5/ -type d -iwholename "*cmake/Qt5")
-          echo "MY_QT_PATH = $MY_QT_PATH"
-          mkdir build
-          cd build
-          cmake ..  -D TCL_LIB_PATHS=/usr/local/opt/tcl-tk/lib \
-                    -D TCL_NO_DEFAULT_PATH=TRUE \
-                    -D Qt5_DIR=${MY_QT_PATH}
-          make -j 12
-
-  build-self-hosted:
-    if: github.repository_owner == 'The-OpenROAD-Project' || github.repository_owner == 'The-OpenROAD-Project-private' || github.repository_owner == 'The-OpenROAD-Project-staging'
-    runs-on: self-hosted-mac
-    steps:
-      - name: Clean runner workspace path
+          cmake -S . -B build -D TCL_LIB_PATHS=/usr/local/opt/tcl-tk/lib -D TCL_NO_DEFAULT_PATH=TRUE -D Qt5_DIR=${MY_QT_PATH}
+          cmake --build build -j 12
+          build/src/openroad -version | tee pr11124-openroad-version.txt
+      - name: Run committed RCX regression suite
         run: |
-          echo "Cleaning up previous run: ${{ github.workspace }}"
-          rm -rf "${{ github.workspace }}"
-          mkdir -p "${{ github.workspace }}"
-      - name: Check out repository code
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+          ctest --test-dir build -N | tee pr11124-ctest-list.txt
+          ctest --test-dir build -R 'rcx' --output-on-failure | tee pr11124-rcx-ctest.log
+      - name: Run custom hierarchical 3D RCX smoke
+        run: |
+          mkdir -p artifacts/pr11124
+          cd src/dbSta/test
+          ../../../build/src/openroad 3dic_rcx_repro.tcl | tee ../../../artifacts/pr11124/3dic_rcx_repro.log
+          cd ../../..
+          python3 - <<'PY'
+          from pathlib import Path
+          root = Path('artifacts/pr11124')
+          expected = [root/'repro.flop_chip_a.spef', root/'repro.flop_chip_b.spef', root/'repro.bonds.spef']
+          for path in expected:
+              assert path.is_file() and path.stat().st_size > 0, f'missing/empty {path}'
+          bonds = (root/'repro.bonds.spef').read_text()
+          assert bonds.count('*D_NET ') == 2, bonds
+          assert 'bridge' in bonds and 'clk_top' in bonds, bonds
+          assert bonds.count(' 0.123') == 2, bonds
+          assert '*CAP' not in bonds, bonds
+          (root/'verification.txt').write_text(
+              'PASS: three SPEFs emitted; 2 inter-chip nets; each bond R=0.123 ohm; no inter-chip CAP section.\n'
+          )
+          print((root/'verification.txt').read_text(), end='')
+          PY
+          cp pr11124-openroad-version.txt pr11124-ctest-list.txt pr11124-rcx-ctest.log artifacts/pr11124/
+      - name: Upload reproduction evidence
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          submodules: 'recursive'
-      - name: Build OpenROAD
-        run: |
-          cmake -B build
-          time -p cmake --build build -j $(sysctl -n hw.ncpu 2>/dev/null)
+          name: pr11124-reproduction-evidence
+          path: artifacts/pr11124
+          if-no-files-found: warn

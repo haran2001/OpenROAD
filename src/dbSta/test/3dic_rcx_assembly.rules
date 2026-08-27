@@ -1,0 +1,4 @@
+# Minimal assembly-design-kit rule consumed by PR #11124.
+VIA_RESISTANCE
+HBV 0.123
+END
