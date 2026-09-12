@@ -1,5 +1,11 @@
 # Fold3D implementation record and approval blocker
 
+## Related design roadmap and later operational note
+
+The [architecture and power-recovery roadmap](ARCHITECTURE_AND_POWER_ROADMAP.md), documented 2026-09-12, expands the planned source changes, physical artifact contracts, tests, fairness policy, and extension gates E01–E04. It is a design proposal, not a new implementation result.
+
+After the approval-blocker record below, a read-only GPL source transfer was resubmitted, explicitly approved by the runtime, and completed with exit code 0. A subsequent read-only workspace check succeeded. This resolved that particular operation, not all future approvals, and did not advance native integration or physical PPA. The approval section below is retained as historical diagnosis.
+
 ## Scope and publication status
 
 This is a documentation-only checkpoint on the native Fold3D development branch. It does not claim that the standalone kernel or local Python prototypes have been committed. The intended deliverable remains a native joint XY/tier GPL optimizer, physically validated two-tier backend, and controlled power experiments. No native-3D power benefit has been measured.
@@ -110,7 +116,7 @@ Official reference: https://hermes-agent.nousresearch.com/docs/reference/slash-c
 
 ## Remaining acceptance sequence
 
-1. Resolve the specific pending-command approval and inspect remote partial-write state.
+1. For further implementation writes, obtain any required command-specific approval and inspect current partial-write state. The later read-only transfer was approved; do not assume blanket approval.
 2. Review and publish the existing standalone source/tests and detailed matrix as a coherent snapshot; currently untracked/unpublished.
 3. Add executable behavioral tests before each actual GPL integration change; register tests in CMake and Bazel. Verify unchanged default 2D behavior against the baseline.
 4. Complete dual spatial density, gradient sweeps, capacity migration, stable joint XY/tier updates, annealing and rounding/legalization. A standalone tier update is not a complete native optimizer.

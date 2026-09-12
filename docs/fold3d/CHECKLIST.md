@@ -1,9 +1,11 @@
 # Fold3D implementation and verification checklist
 
-Status: implementation pending. No Fold3D kernel or benchmark results are claimed.
+Status: native integration and physical benchmarks pending. Partial baseline/kernel/prototype evidence is recorded in [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md); it does not complete the integrated requirements below.
+
+See [ARCHITECTURE_AND_POWER_ROADMAP.md](ARCHITECTURE_AND_POWER_ROADMAP.md) for the complete source integration design, artifact contracts, benchmark policy, and additional power-recovery gates E01–E04.
 
 Upstream baseline: `41a28926b92c5c20f41f89e90222a95a820384d2`.
-Target: existing worker-1, isolated workspace; current access blocked by GCP reauthentication.
+Target: existing worker-1, isolated workspace. The earlier GCP access blocker was resolved; a later source transfer received runtime approval and completed. Individual command approvals and physical acceptance remain separate gates.
 
 A checkbox is completed only with code and passing test/log evidence. Keep the evidence table current after each increment.
 
@@ -42,7 +44,20 @@ A checkbox is completed only with code and passing test/log evidence. Keep the e
 
 | Requirement | Implementation | Test / command | Observed result | Limitations |
 |---|---|---|---|---|
-| All | Pending | Not executed | No implementation claim | VM access blocked |
+| F01–F02 | Partial baseline evidence | Baseline build and GPL CTest; see implementation record | Build exit 0; 74/74 regressions passed | Provenance defect remains; no modified-build equivalence |
+| F06, F08–F09 | Standalone tier math only | `bash src/gpl/test/fold3d/run.sh` in development checkout | 5 groups / 915 checks passed | No spatial deposition or full-objective gradients; source/tests not published in this snapshot |
+| F19–F21 | Local structural backend prototype | Previously rerun Python tests | 3 tests passed | No actual materialization/routing/extraction/STA qualification |
+| F24, F26, F29 | Local benchmark validator prototype | Previously rerun Python tests | 7 tests passed | No physical campaign or PPA result |
+| Other integrated requirements | Pending | Not qualified | No completion claim | See roadmap and implementation record |
+
+## Additional power-recovery gates
+
+These extension gates do not renumber or mark complete F01–F30. Details and acceptance tests are in the [roadmap](ARCHITECTURE_AND_POWER_ROADMAP.md).
+
+- [ ] E01 **Electrical reoptimization** — Inspect resizer/timing APIs and implement controlled downsizing, buffering/removal, and timing repair using the folded electrical model.
+- [ ] E02 **Equivalence and fairness** — Separate fixed-mapped-netlist placement tests from same-RTL/common-input recovery tests; require equivalent logic and matched optimization policy, not identical final netlist hashes.
+- [ ] E03 **Post-edit revalidation** — Refresh physical implementation/parasitics and require connectivity, equivalence, setup/hold, electrical limits, and fresh power evidence after edits; reject stale reports.
+- [ ] E04 **Bounded feedback** — Automated physical-feedback revisions with declared resource/iteration limits, acceptance, rollback, reproducibility, and no manual benchmark-specific moves.
 
 ## Delivery order
 
